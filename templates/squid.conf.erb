@@ -1,0 +1,42 @@
+# This file generated from a Chef template.
+# squid/templates/squid.conf.erb
+
+<% if node['squid']['enable_ncsa'] %>
+auth_param basic program <%= node['squid']['ncsa_auth_path'] %> <%= node['squid']['ncsa_auth_passlist'] %>
+auth_param basic realm <%= node['squid']['ncsa_realm'] %>
+acl <%= node['squid']['ncsa_users'] %> proxy_auth REQUIRED
+http_access allow <%= node['squid']['ncsa_users'] %>
+<% end %>
+
+<% @localnets.each do |localnet| %>
+acl localnet src <%= localnet %>
+<% end %>
+
+<% @ssl_ports.each do |port| %>
+acl SSL_ports port <%= port %>
+<% end %>
+<% @safe_ports.each do |port| %>
+acl Safe_ports port <%= port %>
+<% end %>
+acl purge method PURGE
+acl CONNECT method CONNECT
+
+http_access allow manager localhost
+http_access deny manager
+http_access allow purge localhost
+http_access deny purge
+http_access deny !Safe_ports
+http_access deny CONNECT !SSL_ports
+http_access allow localhost
+<%= "http_access allow localnet" if !@localnets.empty? %>
+<%= "http_access deny all" if node['squid']['http_access_deny_all'] %>
+
+http_port <%= node['squid']['port'] %>
+
+refresh_pattern	    ^ftp:			1440	20%	10080
+refresh_pattern     ^gopher:			1440	0%	1440
+refresh_pattern	    -i (/cgi-bin/|\?)		0	0%	0
+refresh_pattern     (Release|Package(.gz)*)$	0	20%	2880
+refresh_pattern	    .				0	20%	4320
+
+coredump_dir <%= node['squid']['coredump_dir'] %>
